@@ -1,0 +1,7 @@
+Service-Notification/node_modules
+# Ignore application.properties files containing secrets
+**/application.properties
+
+# Ignore environment files
+.env
+secrets.json

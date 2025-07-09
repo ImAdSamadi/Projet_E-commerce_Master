@@ -1,0 +1,18 @@
+depName: payment-service-dep
+replicasNum: 1
+podName: payment-service-pod
+imageName: soulaimandockerhub/payment-service
+imageVersion: v2.2
+containerName: payment-service-container
+containerPort: 8080
+containerEnvVar:
+  - name: CREDIT-CARD_SERVICE_URL
+    value: "credit-card-service-svc:8080"
+  - name: SERVER_PORT
+    value: "8080"
+  - name: BOOTSRAP_KAFKA_SERVER
+    value: "kafka-0.kafka-headless.default.svc.cluster.local"
+  - name: SERVER1_PORT
+    value: "9192"
+serviceName: payment-service-svc
+servicePort: 8080
