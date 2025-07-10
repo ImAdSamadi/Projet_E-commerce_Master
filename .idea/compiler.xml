@@ -11,15 +11,15 @@
         <module name="stock-service" />
         <module name="payment-service" />
         <module name="common" />
-        <module name="configuration-service" />
         <module name="customer-service" />
-        <module name="gateway-service" />
         <module name="shipment-service" />
         <module name="credit-card-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="configuration-service" target="17" />
       <module name="discovery-service" target="17" />
+      <module name="gateway-service" target="17" />
       <module name="products-service" target="17" />
     </bytecodeTargetLevel>
   </component>

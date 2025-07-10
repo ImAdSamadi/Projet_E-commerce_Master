@@ -16,8 +16,8 @@ public class CategoryServiceImpl implements CategoryService {
     private CategoryRepo categoryRepo;
 
     @Override
-    public List<CategoryWithQuantity> findCategoriesWithProductsQuantity() {
-        return categoryRepo.getCategoriesWithProductsQuantity();
+    public List<CategoryWithQuantity> findCategoriesWithProductsQuantity(boolean isAdmin) {
+        return categoryRepo.getCategoriesWithProductsQuantity(isAdmin);
     }
 
 

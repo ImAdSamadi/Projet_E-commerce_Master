@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -18,6 +19,10 @@ public class CategoryWithQuantity {
     private List<String> categorySizes;
 
     private int productsQuantity;
-    private List<Long> categoryPrices;
+    private List<Double> categoryPrices;
+
+    private List<Map<String, Object>> categoryProductsSizesWithCount;
+    private List<Map<String, Object>> categoryProductsColorsWithCount;
+    private List<Map<String, Object>> categoryPricesWithCount;
 
 }

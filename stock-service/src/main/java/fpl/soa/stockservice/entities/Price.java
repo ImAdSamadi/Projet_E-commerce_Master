@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor @NoArgsConstructor @Builder
 public class Price {
     private Currency currency ;
-    private long price ;
+    private Double price ;
     private String symbol ;
 }

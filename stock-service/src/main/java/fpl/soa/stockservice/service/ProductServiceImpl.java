@@ -5,6 +5,7 @@ import fpl.soa.stockservice.DTO.ProductVariantDetails;
 import fpl.soa.stockservice.entities.*;
 import fpl.soa.stockservice.enums.Currency;
 import fpl.soa.stockservice.enums.ProductStatus;
+import fpl.soa.stockservice.filters.ProductFilterRequest;
 import fpl.soa.stockservice.repository.ProductRepo;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -188,7 +189,7 @@ public class ProductServiceImpl implements ProductService {
                                 .size("128GB")
                                 .productPrice(Price.builder()
                                         .currency(Currency.USD)
-                                        .price(350)
+                                        .price(350.00)
                                         .symbol("$")
                                         .build())
                                 .description("Iphone 13 with 128GB storage")
@@ -212,7 +213,7 @@ public class ProductServiceImpl implements ProductService {
                                 .size("256GB")
                                 .productPrice(Price.builder()
                                         .currency(Currency.USD)
-                                        .price(380)
+                                        .price(380.00)
                                         .symbol("$")
                                         .build())
                                 .description("Iphone 13 with 256GB storage")
@@ -266,6 +267,11 @@ public class ProductServiceImpl implements ProductService {
                 .originLocation(product.getOriginLocation())
                 .productImagesBas64(colorVariant.getProductImagesBas64())
                 .build();
+    }
+
+    @Override
+    public Page<Product> filterProductsByCategoryWithVariants(ProductFilterRequest request, Pageable pageable) {
+        return productRepo.filterProductsByCategoryWithVariants(request, pageable);
     }
 
 

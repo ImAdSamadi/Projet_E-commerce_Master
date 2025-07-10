@@ -7,6 +7,6 @@ import java.util.List;
 
 public interface CategoryRepoCustom {
 
-    List<CategoryWithQuantity> getCategoriesWithProductsQuantity();
+    List<CategoryWithQuantity> getCategoriesWithProductsQuantity(boolean isAdmin);
 
 }

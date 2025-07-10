@@ -60,7 +60,7 @@ public class ProductCommandsHandler {
 
             Product reservedProduct = productService.reserve(desiredProduct, command.getOrderId());
 
-            long productPrice = 0L;
+            double productPrice = 0.0;
             if (reservedProduct.getSizeVariants() != null && !reservedProduct.getSizeVariants().isEmpty()) {
                 SizeVariant reservedSizeVariant = reservedProduct.getSizeVariants().get(0);
                 if (reservedSizeVariant.getProductPrice() != null) {

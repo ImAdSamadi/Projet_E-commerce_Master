@@ -14,7 +14,7 @@ import java.util.UUID;
 public class ProductReservedEvent {
     private String orderId;
     private String productId;
-    private long productPrice;
+    private Double productPrice;
     private Integer productQuantity;
     private String customerId;
     private String customerEmailAddress;

@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface CategoryService {
 
-    List<CategoryWithQuantity> findCategoriesWithProductsQuantity();
+    List<CategoryWithQuantity> findCategoriesWithProductsQuantity(boolean isAdmin);
 
     Category createCategory(Category category);
     Category updateCategory(Category category);

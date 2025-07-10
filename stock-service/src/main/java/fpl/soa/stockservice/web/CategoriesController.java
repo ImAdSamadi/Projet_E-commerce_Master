@@ -19,7 +19,11 @@ public class CategoriesController {
     private CategoryService categoryService;
 
     @GetMapping
-    public List<CategoryWithQuantity> getCategoriesWithProductsQuantity(){return this.categoryService.findCategoriesWithProductsQuantity();}
+    public List<CategoryWithQuantity> getCategoriesWithProductsQuantity(
+            @RequestParam(defaultValue = "false") boolean isAdmin
+    ) {
+        return this.categoryService.findCategoriesWithProductsQuantity(isAdmin);
+    }
 
     @PostMapping
     public Category createCategory(@RequestBody Category category){

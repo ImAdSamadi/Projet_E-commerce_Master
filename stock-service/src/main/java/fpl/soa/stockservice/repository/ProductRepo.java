@@ -11,7 +11,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 
 @RepositoryRestResource(excerptProjection = ProductsProjection.class)
-public interface ProductRepo extends MongoRepository<Product , String> {
+public interface ProductRepo extends MongoRepository<Product , String>, ProductCustomRepository {
 //    Page<Product> findByStatus(String status, Pageable pageable);
 //    Page<Product> findByCategoryId(String category, Pageable pageable);
 //    Page<Product> findByNameContainsIgnoreCase(String keyword, Pageable pageable);
