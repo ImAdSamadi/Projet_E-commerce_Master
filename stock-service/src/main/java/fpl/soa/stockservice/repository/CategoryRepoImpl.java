@@ -21,6 +21,7 @@ public class CategoryRepoImpl implements CategoryRepoCustom {
 
 
 
+
 //    @Override
 //    public List<CategoryWithQuantity> getCategoriesWithProductsQuantity(boolean isAdmin) {
 //        List<AggregationOperation> pipeline = new ArrayList<>();
@@ -28,7 +29,7 @@ public class CategoryRepoImpl implements CategoryRepoCustom {
 //        // 1. Lookup products
 //        pipeline.add(Aggregation.lookup("product", "_id", "categoryId", "products"));
 //
-//        // 2. If not admin, filter out unselected colorVariants AND prune sizeVariants that have no selected colors
+//        // 2. Filter selected colorVariants and prune sizeVariants with none selected
 //        if (!isAdmin) {
 //            Document filterSelectedColors = new Document("$map", new Document()
 //                    .append("input", "$products")
@@ -61,16 +62,16 @@ public class CategoryRepoImpl implements CategoryRepoCustom {
 //            );
 //        }
 //
-//        // 3. Add productsQuantity (after filtering)
+//        // 3. Add productsQuantity
 //        pipeline.add(new CustomAggregationOperation(
 //                new Document("$set", new Document("productsQuantity", new Document("$size", "$products")))
 //        ));
 //
-//        // 4. Unwind products and sizeVariants only (we don't care about colorVariants for counts)
+//        // 4. Unwind products and sizeVariants
 //        pipeline.add(Aggregation.unwind("products", true));
 //        pipeline.add(Aggregation.unwind("products.sizeVariants", true));
 //
-//        // 5. Group per category
+//        // 5. Group to gather necessary fields
 //        pipeline.add(Aggregation.group("_id")
 //                .first("categoryName").as("categoryName")
 //                .first("categoryImageBase64").as("categoryImageBase64")
@@ -80,9 +81,12 @@ public class CategoryRepoImpl implements CategoryRepoCustom {
 //                .push("products.sizeVariants.size").as("allSizes")
 //                .push("products.sizeVariants.productPrice.price").as("allPrices")
 //                .push("products.sizeVariants").as("allSizeVariants")
+//                .push(new Document("productId", "$products._id")
+//                        .append("colors", "$products.sizeVariants.colorVariants.color"))
+//                .as("productColorPairs")
 //        );
 //
-//        // 6. Count value occurrences at sizeVariant level
+//        // 6. Map counts for sizes, prices, and distinct color-product match
 //        pipeline.add(new CustomAggregationOperation(
 //                new Document("$set", new Document()
 //                        .append("categoryProductsSizesWithCount", new Document("$map", new Document()
@@ -109,24 +113,25 @@ public class CategoryRepoImpl implements CategoryRepoCustom {
 //                        ))
 //                        .append("categoryProductsColorsWithCount", new Document("$map", new Document()
 //                                .append("input", new Document("$setUnion", new Document("$reduce", new Document()
-//                                        .append("input", "$allSizeVariants")
+//                                        .append("input", "$productColorPairs")
 //                                        .append("initialValue", new ArrayList<>())
-//                                        .append("in", new Document("$concatArrays", Arrays.asList("$$value", "$$this.colorVariants.color")))
+//                                        .append("in", new Document("$concatArrays", Arrays.asList("$$value", "$$this.colors")))
 //                                )))
 //                                .append("as", "color")
 //                                .append("in", new Document()
 //                                        .append("value", "$$color")
-//                                        .append("count", new Document("$size", new Document("$filter", new Document()
-//                                                .append("input", new Document("$reduce", new Document()
-//                                                        .append("input", "$allSizeVariants")
-//                                                        .append("initialValue", new ArrayList<>())
-//                                                        .append("in", new Document("$concatArrays", Arrays.asList("$$value", "$$this.colorVariants.color")))
+//                                        .append("count", new Document("$size", new Document("$setUnion", new Document("$map", new Document()
+//                                                .append("input", new Document("$filter", new Document()
+//                                                        .append("input", "$productColorPairs")
+//                                                        .append("as", "pair")
+//                                                        .append("cond", new Document("$in", Arrays.asList("$$color", "$$pair.colors")))
 //                                                ))
-//                                                .append("cond", new Document("$eq", Arrays.asList("$$this", "$$color")))
-//                                        )))
+//                                                .append("as", "match")
+//                                                .append("in", "$$match.productId")
+//                                        ))))
 //                                )
 //                        ))
-//                        .append("categoryPrices", new Document("$setUnion", "$allPrices"))  // deduplicated raw list
+//                        .append("categoryPrices", new Document("$setUnion", "$allPrices"))
 //                )
 //        ));
 //
@@ -157,7 +162,6 @@ public class CategoryRepoImpl implements CategoryRepoCustom {
 //    }
 
 
-
     @Override
     public List<CategoryWithQuantity> getCategoriesWithProductsQuantity(boolean isAdmin) {
         List<AggregationOperation> pipeline = new ArrayList<>();
@@ -165,36 +169,42 @@ public class CategoryRepoImpl implements CategoryRepoCustom {
         // 1. Lookup products
         pipeline.add(Aggregation.lookup("product", "_id", "categoryId", "products"));
 
-        // 2. Filter selected colorVariants and prune sizeVariants with none selected
+        // 2. If not admin, filter selected colorVariants, prune empty sizeVariants, and remove invalid products
         if (!isAdmin) {
-            Document filterSelectedColors = new Document("$map", new Document()
-                    .append("input", "$products")
-                    .append("as", "product")
-                    .append("in", new Document("$mergeObjects", Arrays.asList(
-                            "$$product",
-                            new Document("sizeVariants", new Document("$filter", new Document()
-                                    .append("input", new Document("$map", new Document()
-                                            .append("input", "$$product.sizeVariants")
-                                            .append("as", "sv")
-                                            .append("in", new Document("$mergeObjects", Arrays.asList(
-                                                    "$$sv",
-                                                    new Document("colorVariants", new Document("$filter", new Document()
-                                                            .append("input", "$$sv.colorVariants")
-                                                            .append("as", "cv")
-                                                            .append("cond", new Document("$eq", Arrays.asList("$$cv.selected", true)))
-                                                    ))
+            Document filteredProducts = new Document("$filter", new Document()
+                    .append("input", new Document("$map", new Document()
+                            .append("input", "$products")
+                            .append("as", "product")
+                            .append("in", new Document("$mergeObjects", Arrays.asList(
+                                    "$$product",
+                                    new Document("sizeVariants", new Document("$filter", new Document()
+                                            .append("input", new Document("$map", new Document()
+                                                    .append("input", "$$product.sizeVariants")
+                                                    .append("as", "sv")
+                                                    .append("in", new Document("$mergeObjects", Arrays.asList(
+                                                            "$$sv",
+                                                            new Document("colorVariants", new Document("$filter", new Document()
+                                                                    .append("input", "$$sv.colorVariants")
+                                                                    .append("as", "cv")
+                                                                    .append("cond", new Document("$eq", Arrays.asList("$$cv.selected", true)))
+                                                            ))
+                                                    )))
+                                            ))
+                                            .append("as", "svFiltered")
+                                            .append("cond", new Document("$gt", Arrays.asList(
+                                                    new Document("$size", "$$svFiltered.colorVariants"), 0
                                             )))
                                     ))
-                                    .append("as", "filteredSV")
-                                    .append("cond", new Document("$gt", Arrays.asList(
-                                            new Document("$size", "$$filteredSV.colorVariants"), 0
-                                    )))
-                            ))
+                            )))
+                    ))
+                    .append("as", "product")
+                    .append("cond", new Document("$gt", Arrays.asList(
+                            new Document("$size", "$$product.sizeVariants"), 0
                     )))
             );
 
             pipeline.add((AggregationOperation) context ->
-                    new Document("$addFields", new Document("products", filterSelectedColors))
+                    new Document("$addFields", new Document("products", filteredProducts))
             );
         }
 
@@ -222,7 +232,7 @@ public class CategoryRepoImpl implements CategoryRepoCustom {
                 .as("productColorPairs")
         );
 
-        // 6. Map counts for sizes, prices, and distinct color-product match
+        // 6. Build counts
         pipeline.add(new CustomAggregationOperation(
                 new Document("$set", new Document()
                         .append("categoryProductsSizesWithCount", new Document("$map", new Document()
