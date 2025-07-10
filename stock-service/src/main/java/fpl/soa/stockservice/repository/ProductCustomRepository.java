@@ -10,4 +10,8 @@ public interface ProductCustomRepository {
 
     Page<Product> filterProductsByCategoryWithVariants(ProductFilterRequest request, Pageable pageable);
 
+    Page<Product> filterProductsByKeywordWithVariants(ProductFilterRequest request, Pageable pageable);
+
+    Page<Product> filterAllProductsWithVariants(ProductFilterRequest request, Pageable pageable);
+
 }

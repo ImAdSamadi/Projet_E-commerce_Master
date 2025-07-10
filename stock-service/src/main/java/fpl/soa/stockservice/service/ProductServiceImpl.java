@@ -274,6 +274,15 @@ public class ProductServiceImpl implements ProductService {
         return productRepo.filterProductsByCategoryWithVariants(request, pageable);
     }
 
+    @Override
+    public Page<Product> filterProductsByKeywordWithVariants(ProductFilterRequest request, Pageable pageable) {
+        return productRepo.filterProductsByKeywordWithVariants(request, pageable);
+    }
+
+    @Override
+    public Page<Product> filterAllProductsWithVariants(ProductFilterRequest request, Pageable pageable) {
+        return productRepo.filterAllProductsWithVariants(request, pageable);
+    }
 
 
     @Override

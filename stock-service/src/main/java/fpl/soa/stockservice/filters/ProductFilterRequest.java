@@ -11,6 +11,7 @@ import java.util.List;
 @NoArgsConstructor
 public class ProductFilterRequest {
     private String categoryId;
+    private String keyword;
     private List<String> priceRanges;   // e.g. ["0-50", "50-100"]
     private List<String> sizes;         // e.g. ["S", "M", "L"]
     private List<String> colors;        // e.g. ["Red", "Blue"]

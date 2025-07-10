@@ -60,22 +60,37 @@ public class ProductsController {
     }
 
 
+    @GetMapping("all")
+    public ResponseEntity<Page<Product>> getAllProductsWithFilters(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) List<String> priceRanges,
+            @RequestParam(defaultValue = "false") boolean admin,
+            @RequestParam(required = false) String sort
+    ) {
+        Pageable pageable = PageRequest.of(page, size, parseSort(sort));
+
+        ProductFilterRequest request = new ProductFilterRequest();
+        request.setPriceRanges(cleanPriceRanges(priceRanges)); // Clean range like ["100-200"]
+        request.setAdmin(admin);
+
+        Page<Product> result = productService.filterAllProductsWithVariants(request, pageable);
+        return ResponseEntity.ok(result);
+    }
+
+
     @GetMapping("by-category")
     public ResponseEntity<Page<Product>> getProductsByCategoryWithFilters(
             @RequestParam String categoryId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "9") int size,
             @RequestParam(required = false) List<String> sizes,
             @RequestParam(required = false) List<String> colors,
             @RequestParam(required = false) List<String> priceRanges,
             @RequestParam(defaultValue = "false") boolean admin,
             @RequestParam(required = false) String sort
     ) {
-        Pageable pageable = PageRequest.of(
-                page,
-                size,
-                sort != null ? Sort.by(sort) : Sort.unsorted()
-        );
+        Pageable pageable = PageRequest.of(page, size, parseSort(sort));
 
         ProductFilterRequest request = new ProductFilterRequest();
         request.setCategoryId(categoryId);
@@ -91,6 +106,53 @@ public class ProductsController {
         Page<Product> result = productService.filterProductsByCategoryWithVariants(request, pageable);
         return ResponseEntity.ok(result);
     }
+
+
+    @GetMapping("search")
+    public ResponseEntity<Page<Product>> getProductsByKeywordWithFilters(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "9") int size,
+            @RequestParam(required = false) List<String> sizes,
+            @RequestParam(required = false) List<String> colors,
+            @RequestParam(required = false) List<String> priceRanges,
+            @RequestParam(defaultValue = "false") boolean admin,
+            @RequestParam(required = false) String sort
+    ) {
+        Pageable pageable = PageRequest.of(page, size, parseSort(sort));
+
+        ProductFilterRequest request = new ProductFilterRequest();
+        request.setKeyword(keyword);
+        request.setSizes(sizes);
+        request.setColors(colors);
+        request.setPriceRanges(cleanPriceRanges(priceRanges));
+        request.setAdmin(admin);
+
+        Page<Product> result = productService.filterProductsByKeywordWithVariants(request, pageable);
+        return ResponseEntity.ok(result);
+    }
+
+
+
+    private Sort parseSort(String sort) {
+        if (sort == null || sort.isEmpty()) {
+            return Sort.by(Sort.Order.desc("addingDate")); // default fallback
+        }
+
+        String[] parts = sort.split(",");
+        if (parts.length == 2) {
+            String field = parts[0].trim();
+            String direction = parts[1].trim().toLowerCase();
+            if (direction.equals("desc")) {
+                return Sort.by(Sort.Order.desc(field));
+            } else if (direction.equals("asc")) {
+                return Sort.by(Sort.Order.asc(field));
+            }
+        }
+
+        return Sort.by(sort); // fallback to unspecific sort
+    }
+
 
 
     private List<String> cleanPriceRanges(List<String> rawRanges) {
