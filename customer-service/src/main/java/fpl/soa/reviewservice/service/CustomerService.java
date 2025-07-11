@@ -12,4 +12,6 @@ public interface CustomerService {
     List<Customer> getAllCustomers();
     void syncKeycloakUsers();
 
+    String getCustomerProfilePictureBase64(String customerId);
+
 }

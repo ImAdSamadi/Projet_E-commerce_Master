@@ -6,6 +6,7 @@ import fpl.soa.reviewservice.exceptions.CustomerNotFoundException;
 import fpl.soa.reviewservice.model.AddItemRequest;
 import fpl.soa.reviewservice.service.CustomerService;
 import fpl.soa.reviewservice.service.ShoppingCartService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,12 +14,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/customers")
 @CrossOrigin(origins = "*")
-public class ReviewRestController {
+public class CustomerRestController {
 
     private ShoppingCartService cartService ;
     private CustomerService customerService ;
 
-     public ReviewRestController(ShoppingCartService cartService, CustomerService customerService) {
+     public CustomerRestController(ShoppingCartService cartService, CustomerService customerService) {
         this.cartService = cartService;
          this.customerService = customerService;
      }
@@ -56,6 +57,12 @@ public class ReviewRestController {
         } catch (CustomerNotFoundException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @GetMapping("/image-base64")
+    public ResponseEntity<String> getCustomerImageBase64(@RequestParam String email) {
+        String base64 = customerService.getCustomerProfilePictureBase64(email);
+        return ResponseEntity.ok(base64);
     }
 
 

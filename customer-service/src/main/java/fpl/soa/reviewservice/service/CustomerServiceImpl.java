@@ -101,4 +101,12 @@ public class CustomerServiceImpl implements CustomerService {
     public List<Customer> getAllCustomers() {
         return customerRepo.findAll();
     }
+
+    @Override
+    public String getCustomerProfilePictureBase64(String email) {
+//        Customer customer = customerRepo.findByEmail(email);
+
+        return customerRepo.findByEmail(email).getProfilePictureBase64();
+    }
+
 }
