@@ -12,6 +12,7 @@
         <module name="payment-service" />
         <module name="common" />
         <module name="customer-service" />
+        <module name="review-service" />
         <module name="shipment-service" />
         <module name="credit-card-service" />
       </profile>
@@ -34,6 +35,7 @@
       <module name="orders-service" options="-parameters" />
       <module name="payment-service" options="-parameters" />
       <module name="products-service" options="-parameters" />
+      <module name="review-service" options="-parameters" />
       <module name="shipment-service" options="-parameters" />
       <module name="stock-service" options="-parameters" />
     </option>
