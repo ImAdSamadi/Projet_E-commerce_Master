@@ -18,9 +18,10 @@ public class ShipmentEntity {
     @Enumerated(EnumType.STRING)
     private ShipmentStatus status ;
     private LocalDate shippedDate ;
+    private LocalDate estimatedDeliveryDate;
     private LocalDate deliveredDate ;
     private String trackingNumber ;
     private String origin ;
     private String destination ;
-    private LocalDate estimatedDeliveryDate;
+
 }

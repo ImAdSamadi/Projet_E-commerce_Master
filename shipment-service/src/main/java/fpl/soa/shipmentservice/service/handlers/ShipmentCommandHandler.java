@@ -46,15 +46,17 @@ public class ShipmentCommandHandler {
         ShipmentEntity createdShipmentEntity = shipmentService.createShipment(shipmentEntity);
 
         ShipmentInProgressEvent shipmentInProgressEvent = ShipmentInProgressEvent.builder()
+                .orderId(shipmentEntity.getOrderId())
                 .deliveryExpectedDate(createdShipmentEntity.getEstimatedDeliveryDate())
                 .originatingAddress(shipmentEntity.getOrigin())
                 .shipmentInitDate(shipmentEntity.getShippedDate())
                 .shippingAddress(shipmentEntity.getDestination())
                 .customerEmailAddress(command.getCustomerEmailAddress())
-                .firstname(command.getFirstname())
-                .lastname(command.getLastname())
-                .orderId(shipmentEntity.getOrderId())
-                .trackingNum(createdShipmentEntity.getTrackingNumber())
+                .firstName(command.getFirstName())
+                .lastName(command.getLastName())
+                .receiverFullName(command.getReceiverFullName())
+                .receiverFullName(command.getReceiverFullName())
+                .trackingSerialNumber(createdShipmentEntity.getTrackingNumber())
                 .build();
 
         kafkaTemplate.send(ShipmentEventTopic, shipmentInProgressEvent);

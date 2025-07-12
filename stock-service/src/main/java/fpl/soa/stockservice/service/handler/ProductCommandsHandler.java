@@ -41,7 +41,9 @@ public class ProductCommandsHandler {
     @KafkaHandler
     public void handleCommand(@Payload ReserveProductCommand command) {
 
-        System.out.println("...Reserving Product ID: "+command.getProductId());
+        System.out.println("...Reserving Product ID: "+command.getProductId()
+                +" Size: "+command.getProductSize()+" Color: "+command.getProductColor()
+                +" Quantity: "+command.getProductQuantity());
 
         try {
             SizeVariant sizeVariant = SizeVariant.builder()

@@ -41,9 +41,7 @@ public class PaymentRestController {
 
     @PostMapping("/capture")
     public ResponseEntity<?> capturePayment(@RequestBody CaptureRequest request) {
-
         if (request.getPayerId() == null || request.getPayerId().isBlank()) {
-            // User cancelled — emit PaymentFailedEvent directly
             PaymentFailedEvent failedEvent = PaymentFailedEvent.builder()
                     .orderId(request.getOrderId())
                     .customerId(request.getCustomerId())
@@ -55,9 +53,7 @@ public class PaymentRestController {
                     .build();
 
             kafkaTemplate.send(paymentEventsTopicName, failedEvent);
-
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Payment was cancelled by the user.");
+            return ResponseEntity.badRequest().body(Map.of("message", "Payment was cancelled by the user."));
         }
 
         try {
@@ -80,7 +76,6 @@ public class PaymentRestController {
 
                 return ResponseEntity.ok(Map.of("message", "Payment captured and event sent."));
             } else {
-                // Payment not approved
                 PaymentFailedEvent failedEvent = PaymentFailedEvent.builder()
                         .orderId(request.getOrderId())
                         .customerId(request.getCustomerId())
@@ -94,11 +89,10 @@ public class PaymentRestController {
                 kafkaTemplate.send(paymentEventsTopicName, failedEvent);
 
                 return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
-                        .body("Payment was not approved.");
+                        .body(Map.of("message", "Payment was not approved."));
             }
 
         } catch (PayPalRESTException e) {
-            // Error during capture
             PaymentFailedEvent failedEvent = PaymentFailedEvent.builder()
                     .orderId(request.getOrderId())
                     .customerId(request.getCustomerId())
@@ -112,7 +106,7 @@ public class PaymentRestController {
             kafkaTemplate.send(paymentEventsTopicName, failedEvent);
 
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Payment capture failed: " + e.getMessage());
+                    .body(Map.of("message", "Payment capture failed", "error", e.getMessage()));
         }
     }
 

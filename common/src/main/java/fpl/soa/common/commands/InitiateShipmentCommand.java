@@ -10,10 +10,12 @@ import java.time.LocalDateTime;
 @Data @AllArgsConstructor @NoArgsConstructor
 @Builder
 public class InitiateShipmentCommand {
-    private String orderId ;
-    private String shippingAddress ;
-    private String originatingAddress ;
+    private String orderId;
     private String customerEmailAddress;
+    private String originatingAddress;
+    private String shippingAddress;
     private String firstName;
     private String lastName;
+    private String receiverFullName;
+    private String receiverEmail;
 }

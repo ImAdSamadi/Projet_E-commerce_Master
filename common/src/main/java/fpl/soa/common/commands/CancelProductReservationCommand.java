@@ -1,15 +1,16 @@
 package fpl.soa.common.commands;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data @NoArgsConstructor
-@AllArgsConstructor
+@AllArgsConstructor @Builder
 public class CancelProductReservationCommand {
-    private String productId;
-    private String productSize;   // NEW: size variant to cancel
-    private String productColor;  // NEW: color variant to cancel
     private String orderId;
+    private String productId;
+    private String productSize;
+    private String productColor;
     private Integer productQuantity;
 }

@@ -16,7 +16,9 @@ public class ShipmentInProgressEvent {
     private LocalDate shipmentInitDate ;
     private LocalDate deliveryExpectedDate ;
     private String customerEmailAddress;
-    private String firstname;
-    private String lastname;
-    private String trackingNum ;
+    private String firstName;
+    private String lastName;
+    private String receiverFullName;
+    private String receiverEmail;
+    private String trackingSerialNumber ;
 }

@@ -93,7 +93,7 @@ public class CustomerServiceImpl implements CustomerService {
     public Customer getCustomer(String customerId) {
         System.out.println(customerId);
         Customer customer = customerRepo.findById(customerId).orElse(null);
-        System.out.println(customer);
+//        System.out.println(customer);
         return customer;
     }
 

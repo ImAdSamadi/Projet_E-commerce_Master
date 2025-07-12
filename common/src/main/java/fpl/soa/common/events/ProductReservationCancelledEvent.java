@@ -9,4 +9,4 @@ import lombok.NoArgsConstructor;
 public class ProductReservationCancelledEvent {
     private String productId;
     private String orderId;
-    }
+}
