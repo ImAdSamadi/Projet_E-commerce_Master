@@ -29,6 +29,11 @@ public class CustomerRestController {
         return customerService.getCustomer(customerId) ;
     }
 
+    @GetMapping("cart/{customerId}")
+    public ShoppingCart getCustomerCartById(@PathVariable String customerId) {
+        return customerService.getCustomer(customerId).getShoppingCart() ;
+    }
+
     @GetMapping("/all")
     public List<Customer> getCustomers() {
         return customerService.getAllCustomers() ;

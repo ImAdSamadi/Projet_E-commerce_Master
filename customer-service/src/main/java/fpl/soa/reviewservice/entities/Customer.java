@@ -27,7 +27,7 @@ public class Customer {
     private String password;
     private String profilePictureBase64;
 
-    private List<String> favoris;
+//    private List<String> favoris;
 
     @DBRef
     private ShoppingCart shoppingCart;

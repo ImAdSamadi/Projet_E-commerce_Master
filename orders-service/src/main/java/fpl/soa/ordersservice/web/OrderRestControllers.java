@@ -25,9 +25,14 @@ public class OrderRestControllers {
         this.orderHistoryService = orderHistoryService;
     }
 
+//    @PostMapping
+//    public CreateOrderResponse createOrder(@RequestBody CreateOrderRequest createOrderRequest) {
+//        return ordersService.placeOrder(createOrderRequest) ;
+//    }
+
     @PostMapping
-    public CreateOrderResponse createOrder(@RequestBody @Valid CreateOrderRequest createOrderRequest) {
-        return ordersService.placeOrder(createOrderRequest) ;
+    public String createOrder(@RequestBody CreateOrderRequest createOrderRequest) {
+        return ordersService.placeOrder(createOrderRequest).getOrderId() ;
     }
 
     @GetMapping("/{orderId}/history")

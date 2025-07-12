@@ -7,13 +7,13 @@ import lombok.NoArgsConstructor;
 
 @Data @AllArgsConstructor @NoArgsConstructor @Builder
 public class PaymentFailedEvent {
+
     private String orderId;
-    private String productId;
-    private Integer productQuantity;
+    private String customerId;
     private String customerEmailAddress;
-    private String originatingAddress;
-    private String shippingAddress;
-    private String firstname;
-    private String lastname;
-//    private long amount ;
+    private String firstName;
+    private String lastName;
+    private String receiverFullName;
+    private String receiverEmail;
+
 }

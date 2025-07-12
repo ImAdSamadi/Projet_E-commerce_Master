@@ -12,15 +12,20 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor @Builder
 public class ProductReservedEvent {
+
     private String orderId;
-    private String productId;
-    private Double productPrice;
-    private Integer productQuantity;
     private String customerId;
+
+    private String productId;
+    private Integer productQuantity;
+    private Double productPrice;
+
     private String customerEmailAddress;
     private String originatingAddress;
     private String shippingAddress;
-    private String firstname;
-    private String lastname;
+    private String firstName;
+    private String lastName;
+    private String receiverFullName;
+    private String receiverEmail;
 
 }

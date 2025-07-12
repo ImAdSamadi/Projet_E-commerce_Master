@@ -19,6 +19,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @KafkaListener(topics = "${products.commands.topic.name}")
@@ -40,7 +41,7 @@ public class ProductCommandsHandler {
     @KafkaHandler
     public void handleCommand(@Payload ReserveProductCommand command) {
 
-        System.out.println("reserved");
+        System.out.println("...Reserving Product ID: "+command.getProductId());
 
         try {
             SizeVariant sizeVariant = SizeVariant.builder()
@@ -61,24 +62,34 @@ public class ProductCommandsHandler {
             Product reservedProduct = productService.reserve(desiredProduct, command.getOrderId());
 
             double productPrice = 0.0;
-            if (reservedProduct.getSizeVariants() != null && !reservedProduct.getSizeVariants().isEmpty()) {
-                SizeVariant reservedSizeVariant = reservedProduct.getSizeVariants().get(0);
-                if (reservedSizeVariant.getProductPrice() != null) {
-                    productPrice = reservedSizeVariant.getProductPrice().getPrice();
+
+            if (reservedProduct.getSizeVariants() != null) {
+                Optional<SizeVariant> matchingSizeVariant = reservedProduct.getSizeVariants().stream()
+                        .filter(sv -> sv.getSize().equalsIgnoreCase(command.getProductSize()))
+                        .findFirst();
+
+                if (matchingSizeVariant.isPresent() && matchingSizeVariant.get().getProductPrice() != null) {
+                    productPrice = matchingSizeVariant.get().getProductPrice().getPrice();
                 }
             }
 
+
             ProductReservedEvent productReservedEvent = ProductReservedEvent.builder()
-                    .productId(command.getProductId())
-                    .productPrice(productPrice)
-                    .productQuantity(command.getProductQuantity())
+                    .orderId(command.getOrderId())
                     .customerId(command.getCustomerId())
+
+                    .productId(command.getProductId())
+                    .productQuantity(command.getProductQuantity())
+                    .productPrice(productPrice)
+
                     .customerEmailAddress(command.getCustomerEmailAddress())
                     .shippingAddress(command.getShippingAddress())
                     .originatingAddress(command.getOriginatingAddress())
-                    .firstname(command.getFirstname())
-                    .lastname(command.getLastname())
-                    .orderId(command.getOrderId())
+                    .firstName(command.getFirstName())
+                    .lastName(command.getLastName())
+                    .receiverFullName(command.getReceiverFullName())
+                    .receiverEmail(command.getReceiverEmail())
+
                     .build();
 
 
@@ -117,4 +128,6 @@ public class ProductCommandsHandler {
 
         kafkaTemplate.send(productEventsTopicName, productReservationCancelledEvent);
     }
+
+
 }

@@ -1,21 +1,19 @@
-package fpl.soa.common.commands;
+package fpl.soa.paymentservice.model;
+
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class CaptureRequest {
 
-@Data @AllArgsConstructor
-@NoArgsConstructor @Builder
-public class ProcessPaymentCommand {
-
+    private String paymentId;
+    private String payerId;
     private String orderId;
     private String customerId;
-
-    private Double totalAmount;
-
     private String customerEmailAddress;
     private String originatingAddress;
     private String shippingAddress;

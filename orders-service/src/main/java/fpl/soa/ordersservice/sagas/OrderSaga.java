@@ -4,6 +4,7 @@ import fpl.soa.common.commands.*;
 import fpl.soa.common.events.*;
 import fpl.soa.common.types.OrderStatus;
 import fpl.soa.ordersservice.entities.OrderEntity;
+import fpl.soa.ordersservice.entities.OrderItem;
 import fpl.soa.ordersservice.service.OrderHistoryService;
 import fpl.soa.ordersservice.service.OrdersService;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,11 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 @Component
@@ -44,45 +50,99 @@ public class OrderSaga {
         this.ordersCommandsTopicName = ordersCommandsTopicName;
     }
 
+    private final Map<String, Integer> expectedProductCountMap = new ConcurrentHashMap<>();
+    private final Map<String, List<ProductReservedEvent>> receivedReservedEventsMap = new ConcurrentHashMap<>();
+
     @KafkaHandler
     public void handleEvent(@Payload OrderCreatedEvent event) {
         System.out.println("***** SAGA step 1 : OrderCreated / orderId : " + event.getOrderId() + " ************* ");
-        ReserveProductCommand command = ReserveProductCommand.builder()
-                .productId(event.getProductId())
-                .orderId(event.getOrderId())
-                .productQuantity(event.getProductQuantity())
-                .customerId(event.getCustomerId())
-                .customerEmailAddress(event.getCustomerEmailAddress())
-                .shippingAddress(event.getShippingAddress())
-                .originatingAddress(event.getOriginatingAddress())
-                .firstname(event.getFirstname())
-                .lastname(event.getLastname())
-                .build();
 
-        kafkaTemplate.send(productsCommandsTopicName,command);
-        orderHistoryService.add(event.getOrderId(), OrderStatus.CREATED);
+        // Fetch the full order with its products from the database
+        OrderEntity order = ordersService.getOrderById(event.getOrderId());
+        List<OrderItem> items = order.getProducts();
+
+        // Store how many product reservations we are expecting
+        expectedProductCountMap.put(order.getOrderId(), items.size());
+
+        for (OrderItem item : items) {
+            ReserveProductCommand command = ReserveProductCommand.builder()
+                    .orderId(order.getOrderId())
+                    .customerId(order.getCustomerId())
+
+                    .productId(item.getProductId())
+                    .productQuantity(item.getQuantity())
+                    .productSize(item.getPickedSize())
+                    .productColor(item.getPickedColor())
+
+                    .customerEmailAddress(event.getCustomerEmail()) // still from event
+                    .shippingAddress(order.getShippingAddress())
+                    .originatingAddress(item.getOriginLocation())
+                    .firstName(event.getCustomerFirstName())  // assuming from event
+                    .lastName(event.getCustomerLastName())    // assuming from event
+                    .receiverFullName(event.getReceiverFullName())
+                    .receiverEmail(event.getReceiverEmail())
+
+                    .build();
+
+            kafkaTemplate.send(productsCommandsTopicName, command);
+        }
+
+        orderHistoryService.add(order.getOrderId(), OrderStatus.CREATED);
+
     }
+
 
     @KafkaHandler
     public void handleEvent(@Payload ProductReservedEvent event) {
-        System.out.println("***** SAGA step 2 : ProductReserved / orderId : " + event.getOrderId() + " ************* ");
-        ProcessPaymentCommand processPaymentCommand = ProcessPaymentCommand.builder()
-                .orderId(event.getOrderId())
-                .productId(event.getProductId())
-                .productPrice(event.getProductPrice())
-                .customerId(event.getCustomerId())
-                .productQuantity(event.getProductQuantity())
-                .customerEmailAddress(event.getCustomerEmailAddress())
-                .shippingAddress(event.getShippingAddress())
-                .originatingAddress(event.getOriginatingAddress())
-                .firstname(event.getFirstname())
-                .lastname(event.getLastname())
-                .build();
+        String orderId = event.getOrderId();
+        System.out.println("***** SAGA step 2 : ProductReserved ID: "+event.getProductId()+" / orderId : " + orderId + " ************* ");
 
-        kafkaTemplate.send(paymentsCommandsTopicName,processPaymentCommand);
+        // Add the current event to the list for this order
+        receivedReservedEventsMap.computeIfAbsent(orderId, k -> new ArrayList<>()).add(event);
 
+        // Check if we have received all expected reservations
+        int expectedCount = expectedProductCountMap.getOrDefault(orderId, 0);
+        int receivedCount = receivedReservedEventsMap.get(orderId).size();
 
+        if (receivedCount == expectedCount) {
+            List<ProductReservedEvent> reservedEvents = receivedReservedEventsMap.remove(orderId);
+
+            // Compute total payment
+            double totalAmount = reservedEvents.stream()
+                    .mapToDouble(e -> e.getProductPrice() * e.getProductQuantity())
+                    .sum();
+
+            // Get shared customer info from one of the events
+            ProductReservedEvent any = reservedEvents.get(0);
+
+            ProcessPaymentCommand processPaymentCommand = ProcessPaymentCommand.builder()
+                    .orderId(orderId)
+                    .customerId(any.getCustomerId())
+                    .totalAmount(totalAmount)
+
+                    .customerEmailAddress(any.getCustomerEmailAddress())
+                    .shippingAddress(any.getShippingAddress())
+                    .originatingAddress(any.getOriginatingAddress())
+                    .firstName(any.getFirstName())
+                    .lastName(any.getLastName())
+                    .receiverFullName(any.getReceiverFullName())
+                    .receiverEmail(any.getReceiverEmail())
+
+                    .build();
+
+            kafkaTemplate.send(paymentsCommandsTopicName, processPaymentCommand);
+
+            // Clean up the count map
+            // expectedProductCountMap.remove(orderId);
+        }
     }
+
+    @KafkaHandler
+    public void handleEvent(@Payload PaymentUrlEvent event){
+        System.out.println("***** SAGA step : PaymentUrl : "+event.getPaymentUrl()
+                +" / orderId : " + event.getOrderId() + " ************* ");
+    }
+
     @KafkaHandler
     public void handleEvent(@Payload PaymentProcessedEvent event){
         System.out.println("***** SAGA step 3 : PaymentProcessed / orderId :  " + event.getOrderId() + " ************* ");
@@ -91,8 +151,8 @@ public class OrderSaga {
                 .customerEmailAddress(event.getCustomerEmailAddress())
                 .shippingAddress(event.getShippingAddress())
                 .originatingAddress(event.getOriginatingAddress())
-                .firstname(event.getFirstname())
-                .lastname(event.getLastname())
+                .firstName(event.getFirstName())
+                .lastName(event.getLastName())
                 .build();
         kafkaTemplate.send(shipmentCommandsTopicName,initiateShipmentCommand);
     }
@@ -112,12 +172,12 @@ public class OrderSaga {
     /** roll back transaction **/
     @KafkaHandler
     public void handleEvent(@Payload PaymentFailedEvent event) {
-        System.out.println("***** SAGA rollback transaction : PaymentFailedEvent / orderId : " + event.getOrderId() + " reserved products quantity "+ event.getProductQuantity() + " ************* ");
-        CancelProductReservationCommand cancelProductReservationCommand =
-                new CancelProductReservationCommand(event.getProductId(),
-                        event.getOrderId(),
-                        event.getProductQuantity());
-        kafkaTemplate.send(productsCommandsTopicName, cancelProductReservationCommand);
+        System.out.println("***** SAGA rollback transaction : PaymentFailedEvent / orderId : " + event.getOrderId() + " reserved products quantity "+ " ************* ");
+//        CancelProductReservationCommand cancelProductReservationCommand =
+//                new CancelProductReservationCommand(event.getProductId(),
+//                        event.getOrderId(),
+//                        event.getProductQuantity());
+//        kafkaTemplate.send(productsCommandsTopicName, cancelProductReservationCommand);
     }
 
     @KafkaHandler

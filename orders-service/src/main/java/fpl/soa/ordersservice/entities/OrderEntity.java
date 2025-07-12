@@ -2,15 +2,15 @@ package fpl.soa.ordersservice.entities;
 
 
 import fpl.soa.common.types.OrderStatus;
-import fpl.soa.ordersservice.models.Customer;
-import fpl.soa.ordersservice.models.Product;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.util.Date;
+import java.util.List;
 
 
 @Document
@@ -18,12 +18,13 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class OrderEntity {
     @Id
     private String orderId;
-    private OrderStatus status;
     private String customerId;
-    private String productId;
-    private Integer productQuantity;
-    @Transient
-    private Customer customer;
-    @Transient
-    private Product product;
+    private List<OrderItem> products;
+    private Double totalPrice;
+    private OrderStatus status;
+    private Date createdAt;
+    private Date updatedAt;
+
+    private String shippingAddress;
+
 }

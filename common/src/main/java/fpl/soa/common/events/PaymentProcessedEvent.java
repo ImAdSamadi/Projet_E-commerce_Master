@@ -10,11 +10,13 @@ import java.util.UUID;
 @AllArgsConstructor @NoArgsConstructor @Data @Builder
 public class PaymentProcessedEvent {
     private String orderId;
-    private Long paymentId;
+    private String customerId;
     private String customerEmailAddress;
     private String originatingAddress;
     private String shippingAddress;
-    private String firstname;
-    private String lastname;
-    private long amount ;
+    private String firstName;
+    private String lastName;
+    private String receiverFullName;
+    private String receiverEmail;
+//    private Double amount ;
 }

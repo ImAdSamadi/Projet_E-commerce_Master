@@ -13,11 +13,13 @@ import java.util.UUID;
 @Data @NoArgsConstructor
 @AllArgsConstructor
 public class CreateOrderRequest {
+
     @NotNull
     private String customerId;
     @NotNull
-    private String productId;
-    @NotNull
-    @Positive
-    private Integer productQuantity;
+    private String shippingAddress;
+
+    private String receiverFullName;
+    private String receiverEmail;
+
 }

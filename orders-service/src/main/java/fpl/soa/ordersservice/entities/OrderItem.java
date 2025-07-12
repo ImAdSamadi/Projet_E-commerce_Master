@@ -1,5 +1,6 @@
-package fpl.soa.ordersservice.models;
+package fpl.soa.ordersservice.entities;
 
+import fpl.soa.ordersservice.models.Price;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,12 +12,15 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ProductCus {
+public class OrderItem {
+
     private String productId ;
     private String name;
-    private Price productPrice;
-    private  String originLocation;
+    private Price priceAtPurchase;
+    private Integer quantity;
+    private String originLocation;
     private String pickedColor ;
     private String pickedSize ;
-    private List<String> productImagesBas64;
+    private List<String> productImagesBase64;
+
 }

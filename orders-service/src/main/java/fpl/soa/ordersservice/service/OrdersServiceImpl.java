@@ -6,12 +6,14 @@ import fpl.soa.common.types.OrderStatus;
 import fpl.soa.ordersservice.dtos.CreateOrderRequest;
 import fpl.soa.ordersservice.dtos.CreateOrderResponse;
 import fpl.soa.ordersservice.entities.OrderEntity;
+import fpl.soa.ordersservice.entities.OrderItem;
 import fpl.soa.ordersservice.mappers.IMapper;
 import fpl.soa.ordersservice.models.Customer;
 import fpl.soa.ordersservice.models.Product;
+import fpl.soa.ordersservice.models.ShoppingCart;
+import fpl.soa.ordersservice.models.ShoppingCartItem;
 import fpl.soa.ordersservice.repositories.OrderRepo;
 import fpl.soa.ordersservice.restClient.CustomerRestClient;
-import fpl.soa.ordersservice.restClient.ProductRestClient;
 import org.keycloak.KeycloakSecurityContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -19,6 +21,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -29,45 +34,93 @@ public class OrdersServiceImpl implements OrdersService {
     private KafkaTemplate<String, Object> kafkaTemplate;
     private String ordersEventsTopicName;
     private CustomerRestClient customerRestClient ;
-    private ProductRestClient productRestClient ;
 
-    public OrdersServiceImpl(OrderRepo orderRepo, IMapper mapper, KafkaTemplate<String, Object> kafkaTemplate, @Value("${orders.events.topic.name}") String ordersEventsTopicName, CustomerRestClient customerRestClient, ProductRestClient productRestClient) {
+    public OrdersServiceImpl(OrderRepo orderRepo, IMapper mapper, KafkaTemplate<String, Object> kafkaTemplate, @Value("${orders.events.topic.name}") String ordersEventsTopicName, CustomerRestClient customerRestClient) {
         this.orderRepo = orderRepo;
         this.mapper = mapper;
         this.kafkaTemplate = kafkaTemplate;
         this.ordersEventsTopicName = ordersEventsTopicName;
         this.customerRestClient = customerRestClient;
-        this.productRestClient = productRestClient;
     }
 
 
     @Override
     public CreateOrderResponse placeOrder(CreateOrderRequest orderReq) {
-        Customer customer = customerRestClient.getCustomer(orderReq.getCustomerId(), getToken());
-        Product product = productRestClient.getProduct(orderReq.getProductId(), getToken());
-        OrderEntity orderEntity = mapper.from(orderReq);
-        orderEntity.setStatus(OrderStatus.CREATED);
-        orderEntity.setProductId(orderReq.getProductId());
-        orderEntity.setOrderId(UUID.randomUUID().toString());
-        OrderEntity savedOrderEntity = orderRepo.save(orderEntity);
 
-        OrderCreatedEvent orderCreatedEvent = OrderCreatedEvent.builder()
-                .orderId(savedOrderEntity.getOrderId())
-                .customerId(savedOrderEntity.getCustomerId())
-                .productId(savedOrderEntity.getProductId())
-                .productQuantity(savedOrderEntity.getProductQuantity())
-                .customerEmailAddress(customer.getEmail())
-                .shippingAddress(customer.getShippingAddress())
-                .originatingAddress(product.getOriginLocation())
-                .firstname(customer.getFirstname())
-                .lastname(customer.getLastname())
+        String token = getToken();
+
+        // 1. Fetch Customer Shopping Cart
+        Customer customer = customerRestClient
+                .getCustomerCart(orderReq.getCustomerId(), token);
+
+        ShoppingCart cart = customer.getShoppingCart();
+
+        if (cart == null || cart.getItems().isEmpty()) {
+            throw new IllegalStateException("Cannot place an order with an empty shopping cart.");
+        }
+
+        // 2. Convert cart items to OrderItems
+        List<OrderItem> orderItems = new ArrayList<>();
+        double total = 0;
+
+        for (ShoppingCartItem cartItem : cart.getItems()) {
+            if (cartItem.isSelected()) {
+                Product product = cartItem.getProduct(); // already embedded
+                int quantity = cartItem.getQuantity();
+
+                OrderItem item = new OrderItem();
+                item.setProductId(product.getProductId());
+                item.setName(product.getName());
+                item.setPriceAtPurchase(product.getProductPrice());
+                item.setQuantity(quantity);
+                item.setOriginLocation(product.getOriginLocation());
+                item.setPickedColor(product.getPickedColor());
+                item.setPickedSize(product.getPickedSize());
+                item.setProductImagesBase64(product.getProductImagesBas64());
+
+                orderItems.add(item);
+
+                total += product.getProductPrice().getPrice() * quantity;
+            }
+        }
+
+        // 3. Create OrderEntity
+        OrderEntity order = new OrderEntity();
+        order.setOrderId(UUID.randomUUID().toString());
+        order.setCustomerId(orderReq.getCustomerId());
+        order.setProducts(orderItems);
+        order.setTotalPrice(total);
+        order.setStatus(OrderStatus.CREATED);
+        order.setShippingAddress(orderReq.getShippingAddress());
+        order.setCreatedAt(new Date());
+        order.setUpdatedAt(new Date());
+
+        orderRepo.save(order);
+
+        // 4. Emit event to start Saga (without product list)
+        OrderCreatedEvent event = new OrderCreatedEvent();
+        event.setOrderId(order.getOrderId());
+        event.setCustomerId(orderReq.getCustomerId());
+        event.setCustomerEmail(customer.getEmail());
+        event.setShippingAddress(orderReq.getShippingAddress());
+        event.setCustomerFirstName(customer.getFirstName());
+        event.setCustomerLastName(customer.getLastName());
+        event.setReceiverFullName(orderReq.getReceiverFullName());
+        event.setReceiverEmail(orderReq.getReceiverEmail());
+
+        kafkaTemplate.send(ordersEventsTopicName, event);
+
+        // 5. Return basic order info
+        return CreateOrderResponse.builder()
+                .orderId(order.getOrderId())
+                .customerId(customer.getCustomerId())
+                .status(order.getStatus())
+                .shippingAddress(order.getShippingAddress())
+                .createdAt(order.getCreatedAt())
                 .build();
-
-        kafkaTemplate.send(ordersEventsTopicName , orderCreatedEvent) ;
-
-
-        return mapper.from(savedOrderEntity);
     }
+
+
 
     @Override
     public void approveOrder(String orderId) {
@@ -81,13 +134,14 @@ public class OrdersServiceImpl implements OrdersService {
 
     @Override
     public OrderEntity getOrderWithCustomer(String orderId) {
-        OrderEntity orderById = getOrderById(orderId);
-        Customer customer = customerRestClient.getCustomer(orderById.getCustomerId() , getToken());
-        System.out.println(customer);
-        Product product = productRestClient.getProduct(orderById.getProductId() , getToken());
-        orderById.setCustomer(customer);
-        orderById.setProduct(product);
-        return orderById;
+//        OrderEntity orderById = getOrderById(orderId);
+//        Customer customer = customerRestClient.getCustomer(orderById.getCustomerId() , getToken());
+//        System.out.println(customer);
+//        Product product = productRestClient.getProduct(orderById.getProductId() , getToken());
+//        orderById.setCustomer(customer);
+//        orderById.setProduct(product);
+//        return orderById;
+        return null;
 
     }
 
@@ -107,12 +161,12 @@ public class OrdersServiceImpl implements OrdersService {
     @Override
     public Customer getCustomerOfOrder(String orderId) {
         OrderEntity orderEntity = orderRepo.findById(orderId).orElse(null);
-        return customerRestClient.getCustomer(orderEntity.getCustomerId() , getToken());
+        return customerRestClient.getCustomerCart(orderEntity.getCustomerId() , getToken());
     }
 
     @Override
     public Customer getCustomer(String customerId) {
-        return customerRestClient.getCustomer(customerId , getToken());
+        return customerRestClient.getCustomerCart(customerId , getToken());
     }
 
     private String getToken(){

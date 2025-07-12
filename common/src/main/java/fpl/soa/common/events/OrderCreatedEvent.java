@@ -13,11 +13,10 @@ import java.util.UUID;
 public class OrderCreatedEvent {
     private String orderId;
     private String customerId;
-    private String productId;
-    private Integer productQuantity;
-    private String customerEmailAddress;
-    private String originatingAddress;
+    private String customerEmail;
     private String shippingAddress;
-    private String firstname;
-    private String lastname;
+    private String customerFirstName;
+    private String customerLastName;
+    private String receiverFullName;
+    private String receiverEmail;
 }

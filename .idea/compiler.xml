@@ -14,11 +14,11 @@
         <module name="customer-service" />
         <module name="review-service" />
         <module name="shipment-service" />
-        <module name="credit-card-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="configuration-service" target="17" />
+      <module name="credit-card-service" target="11" />
       <module name="discovery-service" target="17" />
       <module name="gateway-service" target="17" />
       <module name="products-service" target="17" />

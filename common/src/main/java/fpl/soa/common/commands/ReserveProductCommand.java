@@ -9,15 +9,20 @@ import java.util.UUID;
 
 @AllArgsConstructor @NoArgsConstructor @Data @Builder
 public class ReserveProductCommand {
+
+    private String orderId;
+    private String customerId;
+
     private String productId;
     private Integer productQuantity;
     private String productSize;    // NEW: size variant to reserve
     private String productColor;   // NEW: color variant to reserve
-    private String orderId;
-    private String customerId;
+
     private String customerEmailAddress;
     private String originatingAddress;
     private String shippingAddress;
-    private String firstname;
-    private String lastname;
+    private String firstName;
+    private String lastName;
+    private String receiverFullName;
+    private String receiverEmail;
 }

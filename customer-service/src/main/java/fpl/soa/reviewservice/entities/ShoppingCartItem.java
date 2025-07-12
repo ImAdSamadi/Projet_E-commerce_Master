@@ -11,4 +11,5 @@ import lombok.NoArgsConstructor;
 public class ShoppingCartItem {
     private Product product;
     private int quantity;
+    private boolean selected;
 }
