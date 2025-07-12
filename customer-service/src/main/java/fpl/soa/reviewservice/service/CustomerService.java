@@ -13,5 +13,6 @@ public interface CustomerService {
     void syncKeycloakUsers();
 
     String getCustomerProfilePictureBase64(String customerId);
+    void clearSelectedItems(String customerId);
 
 }

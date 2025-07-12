@@ -39,7 +39,11 @@ public class CustomerRestController {
         return customerService.getAllCustomers() ;
     }
 
-
+    @DeleteMapping("{customerId}/cart/clear-selected")
+    public ResponseEntity<Void> clearSelectedItems(@PathVariable String customerId) {
+        customerService.clearSelectedItems(customerId);
+        return ResponseEntity.noContent().build();
+    }
 
     @PostMapping
     public ShoppingCart addProductToCart(@RequestBody AddItemRequest addItemRequest){

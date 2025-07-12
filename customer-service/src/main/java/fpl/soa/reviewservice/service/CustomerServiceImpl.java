@@ -2,6 +2,7 @@ package fpl.soa.reviewservice.service;
 
 import fpl.soa.reviewservice.entities.Customer;
 import fpl.soa.reviewservice.entities.ShoppingCart;
+import fpl.soa.reviewservice.entities.ShoppingCartItem;
 import fpl.soa.reviewservice.repos.CustomerRepo;
 import fpl.soa.reviewservice.repos.ShoppingCartRepo;
 import org.keycloak.admin.client.Keycloak;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class CustomerServiceImpl implements CustomerService {
@@ -96,6 +98,57 @@ public class CustomerServiceImpl implements CustomerService {
 //        System.out.println(customer);
         return customer;
     }
+
+    @Override
+    public void clearSelectedItems(String customerId) {
+        Customer customer = customerRepo.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+
+        ShoppingCart cart = customer.getShoppingCart();
+        if (cart != null && cart.getItems() != null) {
+            List<ShoppingCartItem> filteredItems = cart.getItems().stream()
+                    .filter(item -> !item.isSelected()) // Keep only unselected
+                    .collect(Collectors.toList());
+
+            cart.setItems(filteredItems);
+            shoppingCartRepo.save(cart); // Save the updated cart directly
+        }
+    }
+
+
+
+    public void clearUnselectedItems(String customerId) {
+        Customer customer = customerRepo.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+
+        ShoppingCart cart = customer.getShoppingCart();
+        if (cart != null && cart.getItems() != null) {
+            List<ShoppingCartItem> filteredItems = cart.getItems().stream()
+                    .filter(ShoppingCartItem::isSelected) // Keep only selected
+                    .collect(Collectors.toList());
+
+            cart.setItems(filteredItems);
+        }
+
+        customerRepo.save(customer);
+    }
+
+    public void removeCartItemByProductId(String customerId, String productId) {
+        Customer customer = customerRepo.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+
+        ShoppingCart cart = customer.getShoppingCart();
+        if (cart != null && cart.getItems() != null) {
+            List<ShoppingCartItem> updatedItems = cart.getItems().stream()
+                    .filter(item -> !item.getProduct().getProductId().equals(productId)) // Keep everything except this product
+                    .collect(Collectors.toList());
+
+            cart.setItems(updatedItems);
+        }
+
+        customerRepo.save(customer);
+    }
+
 
     @Override
     public List<Customer> getAllCustomers() {
