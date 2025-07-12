@@ -16,6 +16,8 @@ import fpl.soa.ordersservice.repositories.OrderRepo;
 import fpl.soa.ordersservice.restClient.CustomerRestClient;
 import org.keycloak.KeycloakSecurityContext;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -167,6 +169,26 @@ public class OrdersServiceImpl implements OrdersService {
     @Override
     public Customer getCustomer(String customerId) {
         return customerRestClient.getCustomerCart(customerId , getToken());
+    }
+
+    @Override
+    public Page<OrderEntity> getOrdersForCustomer(String customerId, String status, Pageable pageable) {
+        Page<OrderEntity> orderPage;
+
+        if (status != null && !status.isBlank()) {
+            OrderStatus orderStatus;
+            try {
+                orderStatus = OrderStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid status value: " + status);
+            }
+            orderPage = orderRepo.findByCustomerIdAndStatus(customerId, orderStatus, pageable);
+        } else {
+            orderPage = orderRepo.findByCustomerId(customerId, pageable);
+        }
+
+        // Map each OrderEntity to OrderResponse DTO
+        return orderPage;
     }
 
     private String getToken(){

@@ -33,4 +33,12 @@ public class ShipmentServiceImpl implements ShipmentService {
     public ShipmentEntity getShipmentById(Long id) {
         return null;
     }
+
+    @Override
+    public ShipmentEntity getShipmentByOrderId(String orderId) {
+        ShipmentEntity shipment = shipmentRepo.findByOrderId(orderId)
+                .orElseThrow(() -> new RuntimeException("Shipment not found for orderId: " + orderId));
+        return shipment;
+    }
+
 }

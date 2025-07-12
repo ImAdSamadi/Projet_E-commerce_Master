@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.util.Date;
 import java.util.List;
@@ -21,6 +22,7 @@ public class OrderEntity {
     private String customerId;
     private List<OrderItem> products;
     private Double totalPrice;
+
     private OrderStatus status;
     private Date createdAt;
     private Date updatedAt;

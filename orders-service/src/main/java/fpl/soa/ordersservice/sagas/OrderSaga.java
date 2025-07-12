@@ -6,6 +6,7 @@ import fpl.soa.common.types.OrderStatus;
 import fpl.soa.ordersservice.entities.OrderEntity;
 import fpl.soa.ordersservice.entities.OrderItem;
 import fpl.soa.ordersservice.repositories.OrderRepo;
+import fpl.soa.ordersservice.restClient.CustomerRestClient;
 import fpl.soa.ordersservice.service.OrderHistoryService;
 import fpl.soa.ordersservice.service.OrdersService;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,11 +41,12 @@ public class OrderSaga {
     private final OrderRepo orderRepo;
     private OrdersService ordersService ;
     private String ordersCommandsTopicName ;
+    private final CustomerRestClient customerClient;
 
     public OrderSaga(KafkaTemplate<String, Object> kafkaTemplate,
                      @Value("${products.commands.topic.name}") String productsCommandsTopicName,
                      OrderHistoryService orderHistoryService, @Value("${shipment.commands.topic.name}") String shipmentCommandsTopicName,
-                     @Value("${payments.commands.topic.name}") String paymentsCommandsTopicName, OrdersService ordersService, @Value("${orders.commands.topic.name}") String ordersCommandsTopicName, OrderRepo orderRepo) {
+                     @Value("${payments.commands.topic.name}") String paymentsCommandsTopicName, OrdersService ordersService, @Value("${orders.commands.topic.name}") String ordersCommandsTopicName, OrderRepo orderRepo, CustomerRestClient customerClient) {
         this.kafkaTemplate = kafkaTemplate;
         this.productsCommandsTopicName = productsCommandsTopicName;
         this.orderHistoryService = orderHistoryService;
@@ -53,6 +55,7 @@ public class OrderSaga {
         this.ordersService = ordersService;
         this.ordersCommandsTopicName = ordersCommandsTopicName;
         this.orderRepo = orderRepo;
+        this.customerClient = customerClient;
     }
 
     private final Map<String, Integer> expectedProductCountMap = new ConcurrentHashMap<>();
@@ -140,7 +143,7 @@ public class OrderSaga {
             kafkaTemplate.send(paymentsCommandsTopicName, processPaymentCommand);
 
             // Clean up the count map
-            // expectedProductCountMap.remove(orderId);
+             expectedProductCountMap.remove(orderId);
         }
     }
 
@@ -165,6 +168,10 @@ public class OrderSaga {
 
                 .build();
         kafkaTemplate.send(shipmentCommandsTopicName,initiateShipmentCommand);
+
+        // Clear Customer CART (Selected Items)
+        customerClient.clearSelectedItems(event.getCustomerId());
+
     }
 
     @KafkaHandler
@@ -177,32 +184,24 @@ public class OrderSaga {
     public void handleEvent(@Payload OrderApprovedEvent event) {
         System.out.println("***** SAGA step 5 : OrderApproved / orderId : " + event.getOrderId() + " ************* ");
         orderHistoryService.add(event.getOrderId(), OrderStatus.APPROVED);
+
     }
 
     /** roll back transaction **/
-//    @KafkaHandler
-//    public void handleEvent(@Payload PaymentFailedEvent event) {
-//        System.out.println("***** SAGA RollBack Transaction : PaymentFailedEvent / orderId : " + event.getOrderId() + " reserved products quantity "+ " ************* ");
-//        CancelProductReservationCommand cancelProductReservationCommand =
-//                new CancelProductReservationCommand(event.getProductId(),
-//                        event.getOrderId(),
-//                        event.getProductQuantity());
-//        kafkaTemplate.send(productsCommandsTopicName, cancelProductReservationCommand);
-//    }
 
     @KafkaHandler
     public void handleEvent(@Payload PaymentFailedEvent event) {
         if (event == null || event.getOrderId() == null) {
-            System.err.println("❌ Invalid PaymentFailedEvent received. Skipping.");
+            System.err.println("Invalid PaymentFailedEvent received. Skipping.");
             return;
         }
 
         String orderId = event.getOrderId();
-        System.out.println("🔁 SAGA rollback: retrieving products for orderId = " + orderId);
+        System.out.println("SAGA RollBack Transaction / orderId: " + orderId);
 
         var order = orderRepo.findById(orderId).orElse(null);
         if (order == null || order.getProducts() == null || order.getProducts().isEmpty()) {
-            System.err.println("⚠️ No products found for orderId = " + orderId);
+            System.err.println("No products found for orderId = " + orderId);
             return;
         }
 
@@ -220,10 +219,10 @@ public class OrderSaga {
 
             kafkaTemplate.send(productsCommandsTopicName, command);
 
-            System.out.println("⛔ Sent CancelProductReservationCommand → productId=" + item.getProductId()
-                    + ", size=" + item.getPickedSize()
-                    + ", color=" + item.getPickedColor()
-                    + ", quantity=" + item.getQuantity());
+            System.out.println("CancelProductReservation productId: " + item.getProductId()
+                    + ", Size=" + item.getPickedSize()
+                    + ", Color=" + item.getPickedColor()
+                    + ", Quantity=" + item.getQuantity());
         }
     }
 
@@ -236,11 +235,11 @@ public class OrderSaga {
         Integer remaining = cancellationTracker.computeIfPresent(orderId, (k, v) -> v - 1);
 
         if (remaining == null) {
-            System.err.println("❌ Received ProductReservationCancelledEvent for unknown orderId = " + orderId);
+            System.err.println("Received ProductReservationCancelledEvent for unknown orderId = " + orderId);
             return;
         }
 
-        System.out.println("🔄 Reservation cancelled for 1 product in orderId = " + orderId
+        System.out.println("Reservation Cancelled for 1 Product in orderId = " + orderId
                 + " → Remaining: " + remaining);
 
         if (remaining <= 0) {
@@ -249,11 +248,9 @@ public class OrderSaga {
             kafkaTemplate.send(ordersCommandsTopicName, new RejectOrderCommand(orderId));
             orderHistoryService.add(orderId, OrderStatus.REJECTED);
 
-            System.out.println("🚫 All product reservations cancelled. Order rejected: " + orderId);
+            System.out.println("All Product Reservations Cancelled. Order Failed / orderId: " + orderId);
         }
     }
 
-
-
-
 }
+

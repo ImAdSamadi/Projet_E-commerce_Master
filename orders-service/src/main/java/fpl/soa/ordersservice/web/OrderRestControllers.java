@@ -2,10 +2,16 @@ package fpl.soa.ordersservice.web;
 
 import fpl.soa.ordersservice.dtos.CreateOrderRequest;
 import fpl.soa.ordersservice.dtos.CreateOrderResponse;
+import fpl.soa.ordersservice.entities.OrderEntity;
 import fpl.soa.ordersservice.entities.OrderHistoryEntity;
 import fpl.soa.ordersservice.models.Customer;
 import fpl.soa.ordersservice.service.OrderHistoryService;
 import fpl.soa.ordersservice.service.OrdersService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -47,4 +53,22 @@ public class OrderRestControllers {
     public Customer getCustomergg(@PathVariable String customerId){
         return ordersService.getCustomer(customerId) ;
     }
+
+    @GetMapping("/customerOrders/{customerId}")
+    public ResponseEntity<Page<OrderEntity>> getOrdersForCustomer(
+            @PathVariable String customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String status
+    ) {
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<OrderEntity> result = ordersService.getOrdersForCustomer(customerId, status, pageable);
+
+        return ResponseEntity.ok(result);
+    }
+
 }

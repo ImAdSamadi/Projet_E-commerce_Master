@@ -9,4 +9,7 @@ public interface ShipmentService {
     ShipmentEntity trackShipment(String trackingNumber);
     List<ShipmentEntity> getShipments();
     ShipmentEntity getShipmentById(Long id);
+
+    ShipmentEntity getShipmentByOrderId(String orderId);
+
 }
