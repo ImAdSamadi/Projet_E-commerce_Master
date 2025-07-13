@@ -12,6 +12,7 @@
         <module name="payment-service" />
         <module name="common" />
         <module name="customer-service" />
+        <module name="coupon-service" />
         <module name="review-service" />
         <module name="shipment-service" />
       </profile>
@@ -28,6 +29,7 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="common" options="-parameters" />
       <module name="configuration-service" options="-parameters" />
+      <module name="coupon-service" options="-parameters" />
       <module name="credit-card-service" options="-parameters" />
       <module name="customer-service" options="-parameters" />
       <module name="discovery-service" options="-parameters" />
