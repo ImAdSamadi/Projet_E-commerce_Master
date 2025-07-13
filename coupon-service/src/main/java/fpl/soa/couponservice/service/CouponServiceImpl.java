@@ -36,10 +36,23 @@ public class CouponServiceImpl implements CouponService {
             throw new RuntimeException("Coupon Expired");
         }
 
+        // Step 1: return coupon (as-is, not activated yet)
+        Coupon response = Coupon.builder()
+                .id(coupon.getId())
+                .code(coupon.getCode())
+                .discountAmount(coupon.getDiscountAmount())
+                .ativated(coupon.isAtivated())
+                .expirationDate(coupon.getExpirationDate())
+
+                .build();
+
+        // Step 2: now mark as activated in DB (after sending to front)
         coupon.setAtivated(true);
         couponRepository.save(coupon);
-        return coupon;
+
+        return response;
     }
+
 
 
     @Override
