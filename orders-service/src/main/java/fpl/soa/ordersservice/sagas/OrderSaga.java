@@ -6,6 +6,7 @@ import fpl.soa.common.types.OrderStatus;
 import fpl.soa.ordersservice.entities.OrderEntity;
 import fpl.soa.ordersservice.entities.OrderItem;
 import fpl.soa.ordersservice.repositories.OrderRepo;
+import fpl.soa.ordersservice.restClient.CouponRestClient;
 import fpl.soa.ordersservice.restClient.CustomerRestClient;
 import fpl.soa.ordersservice.service.OrderHistoryService;
 import fpl.soa.ordersservice.service.OrdersService;
@@ -42,11 +43,12 @@ public class OrderSaga {
     private OrdersService ordersService ;
     private String ordersCommandsTopicName ;
     private final CustomerRestClient customerClient;
+    private final CouponRestClient couponClient;
 
     public OrderSaga(KafkaTemplate<String, Object> kafkaTemplate,
                      @Value("${products.commands.topic.name}") String productsCommandsTopicName,
                      OrderHistoryService orderHistoryService, @Value("${shipment.commands.topic.name}") String shipmentCommandsTopicName,
-                     @Value("${payments.commands.topic.name}") String paymentsCommandsTopicName, OrdersService ordersService, @Value("${orders.commands.topic.name}") String ordersCommandsTopicName, OrderRepo orderRepo, CustomerRestClient customerClient) {
+                     @Value("${payments.commands.topic.name}") String paymentsCommandsTopicName, OrdersService ordersService, @Value("${orders.commands.topic.name}") String ordersCommandsTopicName, OrderRepo orderRepo, CustomerRestClient customerClient, CouponRestClient couponClient) {
         this.kafkaTemplate = kafkaTemplate;
         this.productsCommandsTopicName = productsCommandsTopicName;
         this.orderHistoryService = orderHistoryService;
@@ -56,6 +58,7 @@ public class OrderSaga {
         this.ordersCommandsTopicName = ordersCommandsTopicName;
         this.orderRepo = orderRepo;
         this.customerClient = customerClient;
+        this.couponClient = couponClient;
     }
 
     private final Map<String, Integer> expectedProductCountMap = new ConcurrentHashMap<>();
@@ -91,6 +94,7 @@ public class OrderSaga {
                     .lastName(event.getCustomerLastName())    // assuming from event
                     .receiverFullName(event.getReceiverFullName())
                     .receiverEmail(event.getReceiverEmail())
+                    .couponCode(event.getCouponCode())
 
                     .build();
 
@@ -125,6 +129,13 @@ public class OrderSaga {
             // Get shared customer info from one of the events
             ProductReservedEvent any = reservedEvents.get(0);
 
+            Double couponAmount = 0.0;
+            if (event.getCouponCode() != null && !event.getCouponCode().trim().isEmpty()) {
+                couponAmount = couponClient.getCouponAmount(any.getCouponCode())
+                        .getPrice();
+                System.out.println("Coupon Code: "+event.getCouponCode()+" - Amount: "+couponAmount);
+            }
+
             ProcessPaymentCommand processPaymentCommand = ProcessPaymentCommand.builder()
                     .orderId(orderId)
                     .customerId(any.getCustomerId())
@@ -137,6 +148,9 @@ public class OrderSaga {
                     .lastName(any.getLastName())
                     .receiverFullName(any.getReceiverFullName())
                     .receiverEmail(any.getReceiverEmail())
+
+                    .couponCode(any.getCouponCode())
+                    .couponAmount(couponAmount)
 
                     .build();
 
@@ -156,6 +170,13 @@ public class OrderSaga {
     @KafkaHandler
     public void handleEvent(@Payload PaymentProcessedEvent event){
         System.out.println("***** SAGA step 3 : PaymentProcessed / orderId :  " + event.getOrderId() + " ************* ");
+
+        if (event.getCouponCode() != null && !event.getCouponCode().trim().isEmpty()) {
+            couponClient.deleteCoupon(event.getCouponCode());
+            System.out.println("... Deleting Coupon Code: " + event.getCouponCode()
+                                +" / OrderId: "+event.getOrderId());
+        }
+
         InitiateShipmentCommand initiateShipmentCommand = InitiateShipmentCommand.builder()
                 .orderId(event.getOrderId())
                 .customerEmailAddress(event.getCustomerEmailAddress())

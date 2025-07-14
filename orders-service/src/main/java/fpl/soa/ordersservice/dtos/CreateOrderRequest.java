@@ -3,6 +3,7 @@ package fpl.soa.ordersservice.dtos;
 
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -11,7 +12,7 @@ import javax.validation.constraints.Positive;
 import java.util.UUID;
 
 @Data @NoArgsConstructor
-@AllArgsConstructor
+@AllArgsConstructor @Builder
 public class CreateOrderRequest {
 
     @NotNull
@@ -21,5 +22,6 @@ public class CreateOrderRequest {
 
     private String receiverFullName;
     private String receiverEmail;
+    private String couponCode;
 
 }

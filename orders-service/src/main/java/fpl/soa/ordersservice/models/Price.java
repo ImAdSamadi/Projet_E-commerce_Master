@@ -7,6 +7,6 @@ import lombok.NoArgsConstructor;
 @Data @NoArgsConstructor @AllArgsConstructor
 public class Price {
     private String currency ;
-    private long price ;
+    private Double price ;
     private String symbol ;
 }

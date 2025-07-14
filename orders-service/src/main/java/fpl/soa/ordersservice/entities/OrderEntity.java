@@ -22,6 +22,7 @@ public class OrderEntity {
     private String customerId;
     private List<OrderItem> products;
     private Double totalPrice;
+    private Double discountAmount;
 
     private OrderStatus status;
     private Date createdAt;

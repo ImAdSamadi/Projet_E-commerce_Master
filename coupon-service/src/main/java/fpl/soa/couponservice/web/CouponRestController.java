@@ -44,5 +44,6 @@ public class CouponRestController {
         Price price = couponService.getCouponAmount(code);
         return ResponseEntity.ok(price);
     }
+
 }
 

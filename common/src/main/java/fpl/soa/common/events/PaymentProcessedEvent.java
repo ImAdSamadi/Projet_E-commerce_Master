@@ -18,5 +18,5 @@ public class PaymentProcessedEvent {
     private String lastName;
     private String receiverFullName;
     private String receiverEmail;
-//    private Double amount ;
+    private String couponCode ;
 }

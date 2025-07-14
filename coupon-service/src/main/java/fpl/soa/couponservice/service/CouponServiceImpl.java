@@ -7,6 +7,7 @@ import fpl.soa.couponservice.repos.CouponRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +24,7 @@ public class CouponServiceImpl implements CouponService {
     }
 
     @Override
+    @Transactional
     public void DeleteCoupon(String code) {
         couponRepository.deleteByCode(code);
     }
@@ -91,6 +93,7 @@ public class CouponServiceImpl implements CouponService {
                 .map(Coupon::getDiscountAmount)
                 .orElseThrow(() -> new RuntimeException("Coupon with Code '" + code + "' Not Found"));
     }
+
 
 
 }

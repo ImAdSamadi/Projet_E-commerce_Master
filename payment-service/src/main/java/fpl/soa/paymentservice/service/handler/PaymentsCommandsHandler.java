@@ -43,7 +43,8 @@ public class PaymentsCommandsHandler {
             String approvalUrl = payPalService.createPayment(
                     command.getTotalAmount(),
                     "USD",
-                    command.getOrderId());
+                    command.getOrderId(),
+                    command.getCouponAmount());
 
             // Build the PaymentUrlEvent
             PaymentUrlEvent paymentUrlEvent = PaymentUrlEvent.builder()

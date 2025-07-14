@@ -25,4 +25,5 @@ public class ReserveProductCommand {
     private String lastName;
     private String receiverFullName;
     private String receiverEmail;
+    private String couponCode;
 }

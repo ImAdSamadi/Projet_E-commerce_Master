@@ -19,4 +19,5 @@ public class OrderCreatedEvent {
     private String customerLastName;
     private String receiverFullName;
     private String receiverEmail;
+    private String couponCode;
 }

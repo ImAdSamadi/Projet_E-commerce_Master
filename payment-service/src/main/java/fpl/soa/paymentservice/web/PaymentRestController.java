@@ -70,6 +70,9 @@ public class PaymentRestController {
                         .lastName(request.getLastName())
                         .receiverFullName(request.getReceiverFullName())
                         .receiverEmail(request.getReceiverEmail())
+
+                        .couponCode(request.getCouponCode())
+
                         .build();
 
                 kafkaTemplate.send(paymentEventsTopicName, event);

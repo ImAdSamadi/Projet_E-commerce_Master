@@ -21,5 +21,6 @@ public class CaptureRequest {
     private String lastName;
     private String receiverFullName;
     private String receiverEmail;
+    private String couponCode;
 
 }

@@ -13,6 +13,7 @@ import fpl.soa.ordersservice.models.Product;
 import fpl.soa.ordersservice.models.ShoppingCart;
 import fpl.soa.ordersservice.models.ShoppingCartItem;
 import fpl.soa.ordersservice.repositories.OrderRepo;
+import fpl.soa.ordersservice.restClient.CouponRestClient;
 import fpl.soa.ordersservice.restClient.CustomerRestClient;
 import org.keycloak.KeycloakSecurityContext;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,13 +37,15 @@ public class OrdersServiceImpl implements OrdersService {
     private KafkaTemplate<String, Object> kafkaTemplate;
     private String ordersEventsTopicName;
     private CustomerRestClient customerRestClient ;
+    private final CouponRestClient couponRestClient ;
 
-    public OrdersServiceImpl(OrderRepo orderRepo, IMapper mapper, KafkaTemplate<String, Object> kafkaTemplate, @Value("${orders.events.topic.name}") String ordersEventsTopicName, CustomerRestClient customerRestClient) {
+    public OrdersServiceImpl(OrderRepo orderRepo, IMapper mapper, KafkaTemplate<String, Object> kafkaTemplate, @Value("${orders.events.topic.name}") String ordersEventsTopicName, CustomerRestClient customerRestClient, CouponRestClient couponRestClient) {
         this.orderRepo = orderRepo;
         this.mapper = mapper;
         this.kafkaTemplate = kafkaTemplate;
         this.ordersEventsTopicName = ordersEventsTopicName;
         this.customerRestClient = customerRestClient;
+        this.couponRestClient = couponRestClient;
     }
 
 
@@ -86,6 +89,12 @@ public class OrdersServiceImpl implements OrdersService {
             }
         }
 
+        Double couponAmount = 0.0;
+        if (orderReq.getCouponCode() != null && !orderReq.getCouponCode().trim().isEmpty()) {
+            couponAmount = couponRestClient.getCouponAmount(orderReq.getCouponCode())
+                    .getPrice();
+        }
+
         // 3. Create OrderEntity
         OrderEntity order = new OrderEntity();
         order.setOrderId(UUID.randomUUID().toString());
@@ -96,19 +105,23 @@ public class OrdersServiceImpl implements OrdersService {
         order.setShippingAddress(orderReq.getShippingAddress());
         order.setCreatedAt(new Date());
         order.setUpdatedAt(new Date());
+        order.setDiscountAmount(couponAmount);
 
         orderRepo.save(order);
 
         // 4. Emit event to start Saga (without product list)
-        OrderCreatedEvent event = new OrderCreatedEvent();
-        event.setOrderId(order.getOrderId());
-        event.setCustomerId(orderReq.getCustomerId());
-        event.setCustomerEmail(customer.getEmail());
-        event.setShippingAddress(orderReq.getShippingAddress());
-        event.setCustomerFirstName(customer.getFirstName());
-        event.setCustomerLastName(customer.getLastName());
-        event.setReceiverFullName(orderReq.getReceiverFullName());
-        event.setReceiverEmail(orderReq.getReceiverEmail());
+        OrderCreatedEvent event = OrderCreatedEvent.builder()
+                .orderId(order.getOrderId())
+                .customerId(orderReq.getCustomerId())
+                .customerEmail(customer.getEmail())
+                .shippingAddress(orderReq.getShippingAddress())
+                .customerFirstName(customer.getFirstName())
+                .customerLastName(customer.getLastName())
+                .receiverFullName(orderReq.getReceiverFullName())
+                .receiverEmail(orderReq.getReceiverEmail())
+                .couponCode(orderReq.getCouponCode())
+
+                .build();
 
         kafkaTemplate.send(ordersEventsTopicName, event);
 

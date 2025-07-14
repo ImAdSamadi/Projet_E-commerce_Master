@@ -91,6 +91,7 @@ public class ProductCommandsHandler {
                     .lastName(command.getLastName())
                     .receiverFullName(command.getReceiverFullName())
                     .receiverEmail(command.getReceiverEmail())
+                    .couponCode(command.getCouponCode())
 
                     .build();
 
